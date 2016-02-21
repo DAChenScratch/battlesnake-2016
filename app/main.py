@@ -3,18 +3,29 @@
 import bottle
 import os
 
-    # snake object:
-    #    "id": "1234-567890-123456-7890",
-    #    "name": "Well Documented Snake",
-    #    "status": "alive",
-    #    "message": "Moved north",
-    #    "taunt": "Let's rock!",
-    #    "age": 56,
-    #    "health": 83,
-    #    "coords": [ [1, 1], [1, 2], [2, 2] ],
-    #    "kills": 4,
-    #    "food": 12,
-    #    "gold": 2
+    # SNAKE OBJECT
+    #     "id": "1234-567890-123456-7890",
+    #     "name": "Well Documented Snake",
+    #     "status": "alive",
+    #     "message": "Moved north",
+    #     "taunt": "Let's rock!",
+    #     "age": 56,
+    #     "health": 83,
+    #     "coords": [ [1, 1], [1, 2], [2, 2] ],
+    #     "kills": 4,
+    #     "food": 12,
+    #     "gold": 2
+
+    # THIS IS THE DATA WE RECEIVE FOR EACH 'MOVE'
+    # {
+    #     "game": "hairy-cheese",
+    #     "mode": "classic",
+    #     "turn": 4,
+    #     "height": 20,
+    #     "width": 30,
+    #     "snakes": [ <Snake Object>, <Snake Object>, ... ],
+    #     "food": [ [1, 2], [9, 3], ... ]
+    # }
 
 snakeid = 'f729b53e-3477-447d-b07e-c79d7e326c82'
 
@@ -28,7 +39,6 @@ def index():
         bottle.request.urlparts.scheme,
         bottle.request.urlparts.netloc
     )
-
     return {
         'color': 'green',
         'head': head_url
@@ -37,46 +47,31 @@ def index():
 @bottle.post('/start')
 def start():
     data = bottle.request.json
-
     return {
         'taunt': 'Medusa snake go!'
     }
     
-@bottle.post('/move')
-
-    # THIS IS THE DATA WE RECEIVE: 
-    # {
-    #     "game": "hairy-cheese",
-    #     "mode": "classic",
-    #     "turn": 4,
-    #     "height": 20,
-    #     "width": 30,
-    #     "snakes": [ <Snake Object>, <Snake Object>, ... ],
-    #     "food": [ [1, 2], [9, 3], ... ]
-    # }
-    
+@bottle.post('/move') 
 def move():
     data = bottle.request.json
     move_decision = ['north', 'east', 'south', 'west']
-
     ourSnake = findSnake(data['snakes'])
-    
     head = ourSnake['coords'][0]
+
     neighbours = {  'north': [head[0], head[1]-1],
                     'east': [head[0]+1, head[1]],
                     'south': [head[0], head[1]+1],
-                    'west': [head[0]-1, head[1]]}
+                    'west': [head[0]-1, head[1]]
+                }
     
-    # for each possible direction, check if moving there will cause collison
-    # if so, remove it from the list
+    # Check if each direction is empty; remove if it is not empty
     for direction, coord in neighbours.items():
         if not verifyNeighbours(data, coord):
             move_decision.remove(direction)
 
-    #returns coordinates [x, y] of nearest food
     nearestFood = findNearestFood(ourSnake, data['food'])
-    #find which directions take us closer to food
     
+    # Find which directions take us closer to food
     if nearestFood != []:
         if nearestFood[0] < head[0] and 'west' in move_decision:
             move_decision = ['west']
@@ -93,21 +88,21 @@ def move():
     taunts = {  'north': 'I am a leaf on the wind, see how I soar!',
                 'east': 'Y\'all gonna get turned to stone!',
                 'south': 'Snake head is coming for you',
-                'west': 'Go west young snake.'}
+                'west': 'Go west young snake.'
+            }
+
     return {
         'move': move_decision[0],
         'taunt': taunts[move_decision[0]]
     }
     
-# Input: list of snake objects
-# Output: snake object that is our snake
+# Takes a list of snakes and returns which is ours
 def findSnake(snakes):
     for snake in snakes:
         if snake['id'] == snakeid:
             return snake
 
-# Return the coords [x, y] of where the nearest food is
-# Distances are calculated by calculateDistance method below
+# Return the coordinates of the nearest food
 def findNearestFood(snake, foodList):
     if foodList == []:
         return []
@@ -122,17 +117,16 @@ def findNearestFood(snake, foodList):
             
     return nearestFood
 
-# Calculate the distance between two coords [x1, y1], [x2, y2]
-# Input: two coordinates as a list of [x, y]
+# Distance between our snake's head and the nearest food
 def calculateDistance(coord1, coord2):
     return abs(coord1[0] - coord2[0]) + abs(coord1[1] - coord2[1])
 
-# Input: our data object, coordinates of desired locatioin
+# Input: our data object, coordinates of desired location
 # Output: return TRUE if can move there, FALSE if cannot move there
 def verifyNeighbours(data, coord):
     return not isWall(data, coord) and not isSnake(data, coord)
 
-# Checks if the desired coordinate is a wall
+# Checks if desired coordinate is a wall
 def isWall(data, coord):
     #check if coord is out of bounds
     if coord[0] < 0 or coord[1] < 0:
@@ -147,13 +141,11 @@ def isSnake(data, coord):
     for snake in data['snakes']:
         if coord in snake['coords']:
             return True
-    
     return False
 
 @bottle.post('/end')
 def end():
     data = bottle.request.json
-    
     return {
         'taunt': 'Good game all!'
     }
